@@ -1,27 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Updating UI with WebSockets</title>
 </head>
+
 <body>
-    <button id="add-to-cart">Add to cart</button>
+    <h2>Products</h2>
+    <div id="products"></div>
+
+    <h2>Cart</h2>
     <div id="cart"></div>
 
     <script>
-        const socket = new WebSocket('ws://127.0.0.1:8765');
+        const productsContainer = document.getElementById('products');
+        const cartContainer = document.getElementById('cart');
 
-        document.getElementById('add-to-cart').addEventListener('click', () => {
-            socket.send(JSON.stringify({ action: 'add_to_cart', item: 'item' }));
-        });
+        const productCardTemplate = (name, price) => `
+        <h3>${name}</h3>
+        <p>${price}</p>
+        <button>Add to cart</button>`
+
+        const cartItemTemplate = (name, price) => `
+        <h3>${name}</h3>
+        <p>${price}</p>`
+
+        const socket = new WebSocket('ws://127.0.0.1:8765');
 
         socket.onmessage = function (event) {
             const data = JSON.parse(event.data);
-            if (data.action === 'update_cart') {
-                document.getElementById('cart').textContent = 'Items in cart: ' + data.items.join(', ');
+            if (data.action === 'load_products') {
+                console.log('Load Products');
+                data.products.forEach(product => {
+                    let productCard = document.createElement('div');
+                    productCard.innerHTML = productCardTemplate(product.title, product.price);
+                    let button = productCard.querySelector('button');
+                    button.addEventListener('click', () => {
+                        console.log('Adding to cart', product.id);
+                        socket.send(JSON.stringify({ action: 'add_to_cart', id: product.id }));
+                    });
+                    productsContainer.appendChild(productCard);
+                });
+            } else if (data.action === 'load_cart') {
+                console.log('Load Cart');
+                cartContainer.innerHTML = '';
+                data.cart.forEach(product => {
+                    let cartItem = document.createElement('div');
+                    cartItem.innerHTML = cartItemTemplate(product.title, product.price);
+                    cartContainer.appendChild(cartItem);
+                });
             }
         };
     </script>
 </body>
+
 </html>

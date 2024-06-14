@@ -2,17 +2,27 @@ import asyncio
 import websockets
 import json
 
+products = [
+    {"id": 1, "title": "Product 1", "price": 100},
+    {"id": 2, "title": "Product 2", "price": 200},
+    {"id": 3, "title": "Product 3", "price": 300},
+]
 
 cart = []
 
-
 async def server(websocket, path):
+    await websocket.send(json.dumps({'action': 'load_products', 'products': products}))
+    await websocket.send(json.dumps({'action': 'load_cart', 'cart': cart}))
+
     async for message in websocket:
         data = json.loads(message)
-        if data['action'] == 'add_to_cart':
-            cart.append(data['item'])
-            await websocket.send(json.dumps({'action': 'update_cart', 'items': cart}))
-
+        action = data.get('action')
+        if action == 'add_to_cart':
+            product_id = data.get('id')
+            product = next((p for p in products if p['id'] == product_id), None)
+            if product:
+                cart.append(product)
+                await websocket.send(json.dumps({'action': 'load_cart', 'cart': cart}))
 
 start_server = websockets.serve(server, "0.0.0.0", 8765)
 
