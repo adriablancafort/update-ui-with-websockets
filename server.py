@@ -18,10 +18,21 @@ async def server(websocket, path):
         data = json.loads(message)
         action = data.get('action')
         if action == 'add_to_cart':
-            product_id = data.get('id')
+            product_id, product_quantity = int(data.get('id')), int(data.get('quantity'))
             product = next((p for p in products if p['id'] == product_id), None)
             if product:
-                cart.append(product)
+                cart_item = next((item for item in cart if item['id'] == product_id), None)
+                if cart_item:
+                    cart_item['quantity'] += product_quantity
+                else:
+                    product['quantity'] = product_quantity
+                    cart.append(product)
+                await websocket.send(json.dumps({'action': 'load_cart', 'cart': cart}))
+        elif action == 'remove_from_cart':
+            product_id = int(data.get('id'))
+            cart_item = next((item for item in cart if item['id'] == product_id), None)
+            if cart_item:
+                cart.remove(cart_item)
                 await websocket.send(json.dumps({'action': 'load_cart', 'cart': cart}))
 
 start_server = websockets.serve(server, "0.0.0.0", 8765)

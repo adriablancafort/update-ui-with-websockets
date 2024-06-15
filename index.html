@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Updating UI with WebSockets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body>
@@ -19,13 +20,16 @@
         const cartContainer = document.getElementById('cart');
 
         const productCardTemplate = (name, price) => `
-        <h3>${name}</h3>
-        <p>${price}</p>
-        <button>Add to cart</button>`
+        <h3 class="text-2xl">${name}</h3>
+        <p>Price: ${price} €</p>
+        <input type="number" min="1" value="1" class="quantity"><br>
+        <button class="text-white p-2 rounded bg-blue-600 hover:bg-blue-500">Add to cart</button>`
 
-        const cartItemTemplate = (name, price) => `
-        <h3>${name}</h3>
-        <p>${price}</p>`
+        const cartItemTemplate = (name, price, quantity) => `
+        <h3 class="text-2xl">${name}</h3>
+        <p>Price: ${price} €</p>
+        <p>Quantity: ${quantity}</p>
+        <button class="text-white p-2 rounded bg-red-600 hover:bg-red-500">Remove</button>`
 
         const socket = new WebSocket('ws://127.0.0.1:8765');
 
@@ -38,8 +42,9 @@
                     productCard.innerHTML = productCardTemplate(product.title, product.price);
                     let button = productCard.querySelector('button');
                     button.addEventListener('click', () => {
-                        console.log('Adding to cart', product.id);
-                        socket.send(JSON.stringify({ action: 'add_to_cart', id: product.id }));
+                        const quantity = productCard.querySelector('.quantity').value;
+                        console.log('Adding to cart. Product:', product.id, 'Quantity:', quantity);
+                        socket.send(JSON.stringify({ action: 'add_to_cart', id: product.id, quantity: quantity }));
                     });
                     productsContainer.appendChild(productCard);
                 });
@@ -48,7 +53,12 @@
                 cartContainer.innerHTML = '';
                 data.cart.forEach(product => {
                     let cartItem = document.createElement('div');
-                    cartItem.innerHTML = cartItemTemplate(product.title, product.price);
+                    cartItem.innerHTML = cartItemTemplate(product.title, product.price, product.quantity);
+                    let button = cartItem.querySelector('button');
+                    button.addEventListener('click', () => {
+                        console.log('Remove from cart. Product:', product.id);
+                        socket.send(JSON.stringify({ action: 'remove_from_cart', id: product.id}));
+                    });
                     cartContainer.appendChild(cartItem);
                 });
             }
